@@ -2,6 +2,8 @@
 Phase 5: Harness - structured I/O, retries, and error handling
 around the guarded RAG pipeline.
 """
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import os
 import time

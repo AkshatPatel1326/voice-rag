@@ -17,8 +17,8 @@ Deploy on Render:
   - Add GROQ_API_KEY and ELEVENLABS_API_KEY as Environment Variables in Render settings.
 """
 
-import os
-import tempfile
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware

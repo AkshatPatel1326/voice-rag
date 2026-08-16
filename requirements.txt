@@ -1,0 +1,28 @@
+# --- Core RAG stack (all free/local) ---
+sentence-transformers==3.0.1      # local embeddings, no API key needed
+faiss-cpu                # local vector DB
+datasets==2.20.0                  # to pull MSMARCO-XI from HuggingFace
+
+# --- Chunking helpers ---
+langchain-text-splitters==0.2.2   # gives us fixed-size + recursive/semantic splitters
+nltk==3.8.1                       # sentence tokenization for semantic chunking
+
+# --- LLM for answer generation (free tier) ---
+groq==0.9.0                       # free, very fast inference — good for latency target
+
+# --- Speech-to-text (Sarvam, per task requirement) ---
+requests==2.32.3                  # Sarvam STT is a simple REST call
+
+# --- Harness / orchestration ---
+pydantic==2.8.2                   # structured input/output validation
+tenacity==8.5.0                   # clean retry logic
+
+# --- API / UI for the "live link" requirement ---
+fastapi==0.111.0
+uvicorn==0.30.1
+python-multipart==0.0.9           # for audio file uploads
+
+# --- Utilities ---
+python-dotenv==1.0.1               # load API keys from .env
+numpy==1.26.4
+tqdm==4.66.4

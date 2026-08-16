@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tarang — Voice RAG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand: #F2E8D5;
+    --sand-2: #EAD9B8;
+    --ink: #16232B;
+    --ink-soft: #4A5B63;
+    --ocean: #0B4F6C;
+    --ocean-bright: #2EC4B6;
+    --coral: #FF6B4A;
+    --palm: #2D5A4A;
+    --amber: #B4790A;
+    --red: #B23A2E;
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--sand);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 34px;
+    color: var(--ocean);
+    position: relative;
+    display: inline-block;
+    letter-spacing: 0.01em;
+  }
+
+  .wordmark::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -6px;
+    width: 100%;
+    height: 6px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='6' viewBox='0 0 40 6'%3E%3Cpath d='M0 3 Q5 0 10 3 T20 3 T30 3 T40 3' fill='none' stroke='%232EC4B6' stroke-width='2'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-size: 40px 6px;
+  }
+
+  .tagline {
+    margin-top: 14px;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.5;
+    max-width: 30ch;
+  }
+
+  .status-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--ink-soft);
+    color: var(--ink-soft);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink-soft);
+  }
+  .status-pill[data-state="ready"] { border-color: var(--palm); color: var(--palm); }
+  .status-pill[data-state="ready"] .dot { background: var(--palm); }
+  .status-pill[data-state="offline"] { border-color: var(--red); color: var(--red); }
+  .status-pill[data-state="offline"] .dot { background: var(--red); }
+
+  /* ---------- Porthole mic button ---------- */
+  .mic-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 24px 0 40px;
+  }
+
+  .porthole {
+    position: relative;
+    width: 156px;
+    height: 156px;
+  }
+
+  .sonar-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--coral);
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .porthole.recording .sonar-ring {
+      animation: sonar 1.8s ease-out infinite;
+    }
+    .porthole.recording .sonar-ring:nth-child(2) { animation-delay: 0.6s; }
+    .porthole.recording .sonar-ring:nth-child(3) { animation-delay: 1.2s; }
+  }
+
+  @keyframes sonar {
+    0%   { transform: scale(1);   opacity: 0.55; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  .mic-btn {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 5px solid var(--ocean);
+    background: var(--sand);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    box-shadow:
+      0 -60px 0 -58px var(--ocean), 0 60px 0 -58px var(--ocean),
+      -60px 0 0 -58px var(--ocean), 60px 0 0 -58px var(--ocean),
+      -42px -42px 0 -58px var(--ocean), 42px -42px 0 -58px var(--ocean),
+      -42px 42px 0 -58px var(--ocean), 42px 42px 0 -58px var(--ocean);
+  }
+  .mic-btn:hover { transform: scale(1.03); }
+  .mic-btn:focus-visible { outline: 3px solid var(--ocean-bright); outline-offset: 4px; }
+  .mic-btn[data-recording="true"] {
+    background: var(--coral);
+    border-color: var(--coral);
+  }
+  .mic-btn[data-recording="true"] .mic-icon rect,
+  .mic-btn[data-recording="true"] .mic-icon path { stroke: var(--sand); }
+
+  .mic-icon { width: 44px; height: 44px; }
+  .mic-icon rect, .mic-icon path {
+    stroke: var(--ocean);
+    stroke-width: 2.4;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .mic-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  /* ---------- Text fallback ---------- */
+  .text-row {
+    display: flex;
+    gap: 8px;
+    margin: 8px auto 0;
+    max-width: 480px;
+  }
+  .text-row input {
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 999px;
+    border: 1.5px solid var(--sand-2);
+    background: #fff;
+    color: var(--ink);
+  }
+  .text-row input:focus-visible { outline: 2px solid var(--ocean-bright); outline-offset: 1px; }
+  .text-row button {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 0 22px;
+    border-radius: 999px;
+    border: none;
+    background: var(--ocean);
+    color: var(--sand);
+    cursor: pointer;
+  }
+  .text-row button:hover { background: #093f57; }
+
+  .divider-label {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+  }
+
+  /* ---------- Postcard result ---------- */
+  .postcard {
+    position: relative;
+    background: #fff;
+    border: 1.5px dashed var(--ocean);
+    border-radius: var(--radius);
+    padding: 26px 24px 22px;
+    margin-top: 36px;
+    display: none;
+  }
+  .postcard.visible { display: block; }
+
+  .stamp {
+    position: absolute;
+    top: -14px;
+    right: 22px;
+    background: var(--sand);
+    border: 1.5px solid var(--ocean);
+    border-radius: 50%;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(8deg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 500;
+    color: var(--ocean);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .postcard .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .postcard .transcript-text {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+    font-style: italic;
+  }
+  .postcard .answer-text {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  /* ---------- Boarding-pass strip ---------- */
+  .ticket {
+    display: none;
+    margin-top: 0;
+    background: var(--ocean);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 14px 24px;
+    position: relative;
+  }
+  .ticket.visible { display: flex; }
+  .ticket::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    border-top: 1.5px dashed var(--ocean-bright);
+  }
+  .ticket-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 22px;
+    width: 100%;
+  }
+  .ticket-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--sand);
+  }
+  .ticket-item b { color: var(--ocean-bright); font-weight: 500; }
+  .ticket-item.state-refused b { color: var(--amber); }
+  .ticket-item.state-error b { color: #ff8f80; }
+
+  .error-msg {
+    display: none;
+    font-size: 13px;
+    color: var(--red);
+    text-align: center;
+    margin-top: 14px;
+    font-family: 'Inter', sans-serif;
+  }
+  .error-msg.visible { display: block; }
+
+  footer {
+    margin-top: 64px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  footer a { color: var(--palm); }
+
+  @media (max-width: 420px) {
+    .wordmark { font-size: 28px; }
+    header { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="wordmark">तरंग · Tarang</div>
+      <p class="tagline">Ask a question by voice, pulled straight from the shore — retrieval-grounded, no guesswork.</p>
+    </div>
+    <div class="status-pill" id="statusPill" data-state="connecting">
+      <span class="dot"></span><span id="statusText">connecting</span>
+    </div>
+  </header>
+
+  <div class="mic-stage">
+    <div class="porthole" id="porthole">
+      <div class="sonar-ring"></div>
+      <div class="sonar-ring"></div>
+      <div class="sonar-ring"></div>
+      <button class="mic-btn" id="micBtn" data-recording="false" aria-label="Tap to ask a question by voice">
+        <svg class="mic-icon" viewBox="0 0 44 44" aria-hidden="true">
+          <rect x="16" y="6" width="12" height="20" rx="6"></rect>
+          <path d="M10 20a12 12 0 0 0 24 0"></path>
+          <path d="M22 32v6"></path>
+          <path d="M16 38h12"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="mic-label" id="micLabel">Tap to ask</div>
+
+    <div class="divider-label">or type instead</div>
+    <div class="text-row">
+      <input type="text" id="textInput" placeholder="अपना प्रश्न यहाँ लिखें..." aria-label="Type your question">
+      <button id="textBtn">Ask</button>
+    </div>
+  </div>
+
+  <div class="postcard" id="postcard">
+    <div class="stamp">GOA<br>RAG<br>2026</div>
+    <div class="eyebrow">You asked</div>
+    <div class="transcript-text" id="transcriptText"></div>
+    <div class="eyebrow">Answer</div>
+    <div class="answer-text" id="answerText"></div>
+  </div>
+  <div class="ticket" id="ticket">
+    <div class="ticket-row">
+      <span class="ticket-item" id="tStatus">STATUS <b>—</b></span>
+      <span class="ticket-item" id="tLatency">LATENCY <b>—</b></span>
+      <span class="ticket-item" id="tChunks">CHUNKS <b>—</b></span>
+      <span class="ticket-item" id="tScore">TOP SCORE <b>—</b></span>
+    </div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <footer>
+    Built during HH Goa 2026 · #RAGInGoa
+  </footer>
+</div>
+
+<script>
+  // ---- Configuration ----
+  // Replace with your deployed Render backend URL, no trailing slash.
+  // Example: "https://voice-rag-xxxx.onrender.com"
+  const API_BASE_URL = "https://YOUR-BACKEND-URL.onrender.com";
+
+  const statusPill = document.getElementById("statusPill");
+  const statusText = document.getElementById("statusText");
+  const porthole = document.getElementById("porthole");
+  const micBtn = document.getElementById("micBtn");
+  const micLabel = document.getElementById("micLabel");
+  const textInput = document.getElementById("textInput");
+  const textBtn = document.getElementById("textBtn");
+  const postcard = document.getElementById("postcard");
+  const ticket = document.getElementById("ticket");
+  const transcriptText = document.getElementById("transcriptText");
+  const answerText = document.getElementById("answerText");
+  const errorMsg = document.getElementById("errorMsg");
+  const tStatus = document.getElementById("tStatus");
+  const tLatency = document.getElementById("tLatency");
+  const tChunks = document.getElementById("tChunks");
+  const tScore = document.getElementById("tScore");
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let isRecording = false;
+
+  // ---- Backend health check ----
+  async function checkHealth() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/health`);
+      if (res.ok) {
+        statusPill.dataset.state = "ready";
+        statusText.textContent = "ready";
+      } else {
+        throw new Error("not ok");
+      }
+    } catch (e) {
+      statusPill.dataset.state = "offline";
+      statusText.textContent = "offline";
+    }
+  }
+  checkHealth();
+
+  function showError(message) {
+    errorMsg.textContent = message;
+    errorMsg.classList.add("visible");
+  }
+  function clearError() {
+    errorMsg.classList.remove("visible");
+  }
+
+  function renderResult(data) {
+    transcriptText.textContent = data.transcript || "";
+    answerText.textContent = data.answer || "";
+    postcard.classList.add("visible");
+
+    const statusLabels = { answered: "answered", refused: "refused", error: "error" };
+    tStatus.innerHTML = `STATUS <b>${statusLabels[data.status] || data.status}</b>`;
+    tLatency.innerHTML = `LATENCY <b>${data.latency_ms != null ? Math.round(data.latency_ms) + "ms" : "—"}</b>`;
+    tChunks.innerHTML = `CHUNKS <b>${data.chunks_used ?? "—"}</b>`;
+    tScore.innerHTML = `TOP SCORE <b>${data.top_score != null ? data.top_score.toFixed(3) : "—"}</b>`;
+
+    ["tStatus", "tLatency", "tChunks", "tScore"].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove("state-refused", "state-error");
+      if (data.status === "refused") el.classList.add("state-refused");
+      if (data.status === "error") el.classList.add("state-error");
+    });
+
+    ticket.classList.add("visible");
+  }
+
+  async function askText(query) {
+    clearError();
+    micLabel.textContent = "Riding to the answer...";
+    try {
+      const res = await fetch(`${API_BASE_URL}/ask-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      renderResult(data);
+    } catch (e) {
+      showError("Couldn't reach the server. Check the backend link and try again.");
+    } finally {
+      micLabel.textContent = "Tap to ask";
+    }
+  }
+
+  async function askVoice(blob) {
+    clearError();
+    micLabel.textContent = "Riding to the answer...";
+    const formData = new FormData();
+    formData.append("audio", blob, "recording.webm");
+    try {
+      const res = await fetch(`${API_BASE_URL}/ask-voice`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      renderResult(data);
+    } catch (e) {
+      showError("Couldn't reach the server. Check the backend link and try again.");
+    } finally {
+      micLabel.textContent = "Tap to ask";
+    }
+  }
+
+  textBtn.addEventListener("click", () => {
+    const q = textInput.value.trim();
+    if (!q) {
+      showError("Type a question first.");
+      return;
+    }
+    askText(q);
+  });
+  textInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") textBtn.click();
+  });
+
+  micBtn.addEventListener("click", async () => {
+    if (!isRecording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: "audio/webm" });
+          stream.getTracks().forEach(t => t.stop());
+          askVoice(blob);
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        micBtn.dataset.recording = "true";
+        porthole.classList.add("recording");
+        micLabel.textContent = "Listening... tap again to stop";
+        clearError();
+      } catch (e) {
+        showError("Microphone access denied. Type your question instead.");
+      }
+    } else {
+      mediaRecorder.stop();
+      isRecording = false;
+      micBtn.dataset.recording = "false";
+      porthole.classList.remove("recording");
+    }
+  });
+</script>
+</body>
+</html>

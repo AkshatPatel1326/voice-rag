@@ -2,8 +2,6 @@
 Phase 5: Harness - structured I/O, retries, and error handling
 around the guarded RAG pipeline.
 """
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import os
 import time
@@ -12,7 +10,6 @@ import logging
 from typing import Optional
 
 import faiss
-from sentence_transformers import SentenceTransformer
 from groq import Groq
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -29,6 +26,13 @@ INDEX_PATH = "data/faiss_index.bin"
 METADATA_PATH = "data/chunk_metadata.pkl"
 TOP_K = 3
 GROQ_MODEL = "llama-3.1-8b-instant"
+
+# "torch" (default): full sentence-transformers + PyTorch, used for local dev/
+#   testing/benchmarking scripts where RAM isn't a constraint.
+# "onnx": lightweight onnxruntime-based embedder, used on Render (set via the
+#   EMBED_BACKEND environment variable) where the free tier's 512MB RAM can't
+#   fit full PyTorch + the float32 model.
+EMBED_BACKEND = os.getenv("EMBED_BACKEND", "torch")
 
 REFUSAL_MESSAGES = {
     "unsafe_input": "मुझे खेद है, मैं इस प्रकार के प्रश्न का उत्तर नहीं दे सकता।",
@@ -63,7 +67,16 @@ class RAGHarness:
         self.index = faiss.read_index(INDEX_PATH)
         with open(METADATA_PATH, "rb") as f:
             self.chunks = pickle.load(f)
-        self.embed_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+
+        if EMBED_BACKEND == "onnx":
+            logger.info("Using lightweight ONNX embedding backend (deployment mode).")
+            from onnx_embedder import OnnxQueryEmbedder
+            self.embed_model = OnnxQueryEmbedder()
+        else:
+            logger.info("Using full sentence-transformers/PyTorch embedding backend (local mode).")
+            from sentence_transformers import SentenceTransformer
+            self.embed_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+
         self.groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         logger.info("Harness ready.")
 

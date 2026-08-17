@@ -1,0 +1,21 @@
+# Requirements for the DEPLOYED backend only (Render, 512MB RAM free tier).
+# Deliberately excludes torch / sentence-transformers / transformers — those
+# stay in requirements.txt for local dev, data-building, and benchmark scripts,
+# which run on your own machine where RAM isn't a constraint.
+#
+# Set the Render Build Command to:
+#     pip install -r requirements-api.txt
+# and add the environment variable EMBED_BACKEND=onnx in Render's dashboard.
+
+fastapi
+uvicorn
+python-multipart
+pydantic
+python-dotenv
+tenacity
+groq
+elevenlabs
+faiss-cpu
+onnxruntime
+tokenizers
+numpy

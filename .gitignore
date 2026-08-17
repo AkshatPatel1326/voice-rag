@@ -7,3 +7,4 @@ data/raw/
 data/*.faiss
 .ipynb_checkpoints/
 *.log
+data/onnx_model/

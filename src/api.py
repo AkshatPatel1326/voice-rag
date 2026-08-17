@@ -17,12 +17,18 @@ Deploy on Render:
   - Add GROQ_API_KEY and ELEVENLABS_API_KEY as Environment Variables in Render settings.
 """
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import os
+import sys
+import tempfile
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# Make sibling imports (harness, stt, and harness's own "from guardrails import ...")
+# work regardless of whether this is run as "python src/api.py" or as the package
+# "src.api:app" (which is how Render/uvicorn launches it from the repo root).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from harness import RAGHarness, QueryRequest
 from stt import transcribe_audio

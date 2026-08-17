@@ -31,7 +31,21 @@ class OnnxQueryEmbedder:
         model_path = hf_hub_download(repo_id=repo_id, filename="model_quantized.onnx")
         tokenizer_path = hf_hub_download(repo_id=repo_id, filename="tokenizer.json")
 
-        self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+        # Keep onnxruntime's own memory footprint as small as possible: by
+        # default it pre-allocates a generous memory arena and spins up
+        # multiple threads, sized for a server-class machine. On Render's
+        # 512MB free tier that overhead alone can tip us over the limit, so
+        # we disable the arena and cap threads to 1 (the model is tiny and
+        # we're only ever embedding one short query at a time anyway).
+        sess_options = ort.SessionOptions()
+        sess_options.enable_cpu_mem_arena = False
+        sess_options.intra_op_num_threads = 1
+        sess_options.inter_op_num_threads = 1
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+
+        self.session = ort.InferenceSession(
+            model_path, sess_options=sess_options, providers=["CPUExecutionProvider"]
+        )
         self.tokenizer = Tokenizer.from_file(tokenizer_path)
         self.tokenizer.enable_padding()
         self.tokenizer.enable_truncation(max_length=MAX_LENGTH)

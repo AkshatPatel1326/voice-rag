@@ -18,7 +18,7 @@ from tokenizers import Tokenizer
 from huggingface_hub import hf_hub_download
 
 # Change this to your actual HF username/repo from step 1-2 above.
-HF_REPO_ID = "YOUR_HF_USERNAME/voice-rag-onnx-embedder"
+HF_REPO_ID = "Akshat1326/voice-rag-onnx-embedder"
 MAX_LENGTH = 128
 
 

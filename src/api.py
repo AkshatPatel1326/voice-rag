@@ -10,11 +10,17 @@ Run locally from the project root:
     uvicorn src.api:app --reload --port 8000
 (or, from inside src/:  uvicorn api:app --reload --port 8000)
 
-Deploy on Render:
-  - Root Directory: repo root
-  - Build Command:  pip install -r requirements.txt
-  - Start Command:  uvicorn src.api:app --host 0.0.0.0 --port $PORT
-  - Add GROQ_API_KEY and ELEVENLABS_API_KEY as Environment Variables in Render settings.
+Deploy on Google Cloud Run:
+  - Handled entirely by the Dockerfile at the repo root (see Dockerfile).
+  - It runs `uvicorn api:app --host 0.0.0.0 --port $PORT` from inside src/,
+    with src/ added to PYTHONPATH, so the sys.path.insert below is a
+    belt-and-suspenders fallback, not strictly required by that path.
+  - Deploy with:
+      gcloud run deploy ragtag-goa --source . --region asia-south1 \
+        --memory 2Gi --cpu 1 --allow-unauthenticated \
+        --set-env-vars GROQ_API_KEY=...,ELEVENLABS_API_KEY=...
+  - GROQ_API_KEY and ELEVENLABS_API_KEY are passed via --set-env-vars above
+    (Cloud Run's equivalent of Render's Environment Variables panel).
 """
 
 import os
@@ -26,8 +32,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Make sibling imports (harness, stt, and harness's own "from guardrails import ...")
-# work regardless of whether this is run as "python src/api.py" or as the package
-# "src.api:app" (which is how Render/uvicorn launches it from the repo root).
+# work regardless of whether this is run as "python src/api.py", as the package
+# "src.api:app", or as "api:app" from inside src/ (how the Cloud Run Dockerfile
+# launches it).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from harness import RAGHarness, QueryRequest

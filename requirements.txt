@@ -13,6 +13,3 @@ python-multipart
 python-dotenv
 numpy
 tqdm
-fastapi
-uvicorn
-python-multipart

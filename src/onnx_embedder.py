@@ -42,6 +42,10 @@ class OnnxQueryEmbedder:
         sess_options.intra_op_num_threads = 1
         sess_options.inter_op_num_threads = 1
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        # Skip graph optimization at load time — it causes a temporary memory
+        # spike while restructuring the graph, on top of the model itself.
+        # Not needed here since the model is already quantized/pre-optimized.
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
 
         self.session = ort.InferenceSession(
             model_path, sess_options=sess_options, providers=["CPUExecutionProvider"]

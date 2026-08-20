@@ -5,6 +5,7 @@ langchain-text-splitters
 nltk
 groq
 requests
+elevenlabs
 pydantic
 tenacity
 fastapi

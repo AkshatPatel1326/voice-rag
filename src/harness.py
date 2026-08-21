@@ -25,7 +25,7 @@ logger = logging.getLogger("rag_harness")
 INDEX_PATH = "data/faiss_index.bin"
 METADATA_PATH = "data/chunk_metadata.pkl"
 TOP_K = 3
-GROQ_MODEL = "llama-3.1-8b-instant"
+GROQ_MODEL = "openai/gpt-oss-20b"
 
 # "torch" (default): full sentence-transformers + PyTorch, used for local dev/
 #   testing/benchmarking scripts where RAM isn't a constraint.
